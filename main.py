@@ -16,8 +16,10 @@ if __name__ == '__main__':
 
     # Upload '/home/user/Photos/asiaphotos.zip' as object name
     # 'asiaphotos-2015.zip' to bucket 'asiatrip'.
-    minioClient.fput_object("my-bucket", "test.zip", "./asset/test.zip", )
-    print("'./asset/test.zip' is successfully uploaded as "
-          "object 'test.zip' to bucket 'my_bucket'.")
+    # minioClient.fput_object("my-bucket", "test.zip", "./asset/test.zip", )
+    # print("'./asset/test.zip' is successfully uploaded as "
+    #       "object 'test.zip' to bucket 'my_bucket'.")
+
+    minioClient.fget_object("my-bucket", "test.zip", "./asset/my-filename.zip")
 
 
