@@ -122,14 +122,50 @@ def change_Vision_data_name(client, bucket_name):
             destination_object_name = prefix + "/" + image_type + "/" + str(layer_num) + ".jpg"
             if source_object_name == destination_object_name:
                 continue
-            # [2-2] 객체 이동
+            # 객체 이동
             client.copy_object(
                 bucket_name,
                 destination_object_name,
                 CopySource(bucket_name, source_object_name)
             )
-            # [2-3] 원본 객체 삭제
+            # 원본 객체 삭제
             client.remove_object(bucket_name, source_object_name)
+            
+from concurrent.futures import ThreadPoolExecutor, as_completed
+def change_Vision_data_name_parallel(client, bucket_name):
+    # bp_id 가 242 이상이면 제끼면 됨
+    for bp_id in tqdm(range(242), desc="Outer Loop"):
+        prefix = "Build/Build Process/2/" + str(bp_id) + "/InSitu/Vision"
+        objects = get_object_list_with_prefix(minio_client, "hbnu", prefix)
+
+        def process_object(obj):
+            splits = obj.split('/')
+            file_name = splits[-1]  # 마지막 파트
+            image_type = splits[-2]  # 마지막에서 두 번째 파트
+            # 정규 표현식을 사용하여 정수 추출
+            match = re.search(r'\d+', file_name)
+            if match:
+                layer_num = int(match.group())
+            else:
+                return
+            source_object_name = prefix + "/" + obj
+            destination_object_name = prefix + "/" + image_type + "/" + str(layer_num) + ".jpg"
+            if source_object_name == destination_object_name:
+                return
+            # 객체 이동
+            client.copy_object(
+                bucket_name,
+                destination_object_name,
+                CopySource(bucket_name, source_object_name)
+            )
+            # 원본 객체 삭제
+            client.remove_object(bucket_name, source_object_name)
+
+        # ThreadPoolExecutor를 사용하여 병렬 처리
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(process_object, obj) for obj in objects]
+            for f in tqdm(as_completed(futures), desc="Inner Loop", total=len(objects), leave=False):
+                pass  # 여기서는 결과를 기다리지 않음
 
 if __name__ == "__main__":
     # found = client.bucket_exists(bucket)
@@ -141,7 +177,7 @@ if __name__ == "__main__":
     # upload_directory_to_minio(local_directory, bucket)
     # print("---{}s seconds---".format(time.time()-start_time))
     
-    change_Vision_data_name(minio_client, "hbnu")
+    change_Vision_data_name_parallel(minio_client, "hbnu")
     
     
         
